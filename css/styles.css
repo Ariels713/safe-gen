@@ -489,3 +489,9 @@
 .post-money-cap .safe-text {
   font-size: 11pt;
 }
+
+.required-indicator {
+  color: #00a688;
+  font-size: 12px;
+  /* margin-top: 4px; */
+}

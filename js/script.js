@@ -67,7 +67,21 @@ class FormNavigation {
           { id: "discount-input", type: "percentage", required: true },
           { id: "pro-rata-select", type: "select", required: true }
         ],
-        ...this.COMMON_FIELDS
+        company: [
+          { id: "company-name", type: "text", required: true },
+          { id: "state-incorporation", type: "select", required: true, default: "Delaware" },
+          { id: "state-governance", type: "select", required: true, default: "Delaware" },
+          { id: "company-address", type: "text", required: false },
+          { id: "signatory-name", type: "text", required: false },
+          { id: "signatory-title", type: "text", required: false },
+          { id: "signatory-email", type: "email", required: false }
+        ],
+        investor: [
+          { id: "investor-name", type: "text", required: true },
+          { id: "investment-amount", type: "currency", required: true },
+          { id: "entity-signatory-title", type: "text", required: true, dependsOn: "entity-type" },
+          { id: "entity-signatory-email", type: "email", required: true, dependsOn: "entity-type" },
+        ]
       },
       "Post-Money SAFE - MFN (Most Favored Nation)": {
         safeType: [
@@ -183,14 +197,20 @@ class FormNavigation {
     this.companyContinueButton = document.getElementById("company-continue");
     this.investorContinueButton = document.getElementById("investor-continue");
     this.reviewOutput = document.getElementById("review-output");
-    this.downloadButton = document.getElementById('download-btn');
     this.proRataDownloadButton = document.getElementById('download-pro-rata-btn');
 
-    // Initialize proRata and proRataRights from the preselected option
+    // Initialize proRata and proRataRights from the preselected option, only if SAFE type uses pro-rata-select
     if (this.proRataSelect) {
-      const selectedValue = this.proRataSelect.value;
-      this.formData.proRata = selectedValue;
-      this.formData.proRataRights = selectedValue === "Includes Pro Rata Rights";
+      const safeConfig = this.SAFE_TYPES[this.formData.safeType] || {};
+      const usesProRata = safeConfig.safeType?.some(f => f.id === "pro-rata-select");
+      if (usesProRata) {
+        const selectedValue = this.proRataSelect.value;
+        this.formData.proRata = selectedValue;
+        this.formData.proRataRights = selectedValue === "Includes Pro Rata Rights";
+      } else {
+        this.formData.proRata = null;
+        this.formData.proRataRights = false;
+      }
     }
 
     // Prevent cursor flicker by ensuring buttons use pointer cursor explicitly
@@ -299,8 +319,9 @@ class FormNavigation {
       }
     });
 
-    this.downloadButton.addEventListener('click', () => this.generatePDF());
-    this.proRataDownloadButton?.addEventListener('click', () => this.generateProRataPDF());
+    this.proRataDownloadButton?.addEventListener('click', () => {
+      this.generateDOC("template-pro-rata", "Pro_Rata_Letter.doc");
+    });
 
     // DOC download button event listener (restored logic)
     const docDownloadBtn = document.getElementById("download-doc-btn");
@@ -314,7 +335,8 @@ class FormNavigation {
           "Pre-Money SAFE - Valuation Cap Only": "template-pre-money-cap",
           "Pre-Money SAFE - Discount Only": "template-pre-money-discount",
           "Pre-Money SAFE - Valuation Cap and Discount": "template-pre-money-both",
-          "Pre-money SAFE - MFN (Most Favored Nation)": "template-post-money-mfn"
+          "Pre-money SAFE - MFN (Most Favored Nation)": "template-post-money-mfn",
+          "Pro Rata Side Letter": "template-pro-rata" 
         };
         const templateId = templateMap[safeType];
         if (!templateId) {
@@ -430,6 +452,14 @@ class FormNavigation {
   handleSafeTypeChange(event) {
     const selectedType = event.target.value;
     this.formData.safeType = selectedType;
+
+    // Set initial value of the pro-rata field and its related flag
+    const proRataEl = document.getElementById("pro-rata-select");
+    if (proRataEl) {
+      const selectedValue = proRataEl.value;
+      this.formData.proRata = selectedValue;
+      this.formData.proRataRights = selectedValue === "Includes Pro Rata Rights";
+    }
 
     // Get the configuration for the selected SAFE type
     const safeConfig = this.SAFE_TYPES[selectedType];
@@ -623,38 +653,45 @@ class FormNavigation {
     if (this.currentTab === "instructions") {
       return this.formData.disclaimerAccepted;
     }
-  
+
     const safeConfig = this.SAFE_TYPES[this.formData.safeType];
     if (!safeConfig) return false;
-  
+
     // SAFE Type step: all fields in safeConfig.safeType are required
     if (this.currentTab === "safe-type") {
       return safeConfig.safeType.every(field => {
         const el = document.getElementById(field.id);
-        return el && el.value;
+        return el && el.offsetParent !== null && el.value.trim() !== "";
       });
     }
-  
+
     // Company step: only the truly required company fields
     if (this.currentTab === "company") {
       return (safeConfig.company || [])
         .filter(field => field.required)
         .every(field => {
           const el = document.getElementById(field.id);
-          return el && el.value;
+          return el && el.offsetParent !== null && el.value.trim() !== "";
         });
     }
-  
-    // Investor step: only the truly required investor fields
+
+    // Investor step: only the truly required investor fields, with proper dependsOn logic
     if (this.currentTab === "investor") {
       return (safeConfig.investor || [])
-        .filter(field => field.required)
+        .filter(field => {
+          if (!field.required) return false;
+          if (field.dependsOn) {
+            const trigger = document.getElementById(field.dependsOn);
+            return trigger && trigger.value && trigger.value.trim() !== "";
+          }
+          return true;
+        })
         .every(field => {
           const el = document.getElementById(field.id);
-          return el && el.value;
+          return el && el.offsetParent !== null && el.value.trim() !== "";
         });
     }
-  
+
     // Review and any other tabs
     return true;
   }
@@ -728,7 +765,6 @@ class FormNavigation {
     const isProRataLetterOnly = this.formData.safeType === "Pro Rata Side Letter";
 
     // Toggle buttons
-    this.downloadButton.style.display = isProRataLetterOnly ? 'none' : 'inline-block';
     this.proRataDownloadButton.style.display = (hasProRataRights || isProRataLetterOnly) ? 'inline-block' : 'none';
 
     // Do not render the Pro Rata letter in the review view — only allow downloading it
@@ -736,16 +772,18 @@ class FormNavigation {
 
   getLegalTemplate(templateId) {
     const { valuationCap, discount, dateOfSafe } = this.formData;
+    const discountPercent = parseFloat(discount) || 0;
+    const discountRate = 100 - discountPercent;
     const templateEl = document.getElementById(templateId);
     if (!templateEl) return "<p>Template not found.</p>";
     let html = templateEl.innerHTML;
-    
+
     // Helper function to safely get input value
     const getInputValue = (id) => {
       const element = document.getElementById(id);
       return element ? element.value.trim() : "";
     };
-    
+
     // Replace all placeholders with actual values or empty strings
     html = html.replace(/\[dateOfSafe\]/g, dateOfSafe || "");
     html = html.replace(/\[valuationCap\]/g, valuationCap || "");
@@ -768,7 +806,9 @@ class FormNavigation {
     html = html.replace(/\[investorAddress\]/g, getInputValue("investor-address") || "");
     html = html.replace(/\[investorEmail\]/g, getInputValue("investor-email") || "");
     html = html.replace(/\[Governing Law Jurisdiction\]/g, getInputValue("state-governance") || "");
-    
+    // Add replacement for [discountRate]
+    html = html.replace(/\[discountRate\]/g, `${discountRate}%`);
+
     return html;
   }
 
@@ -783,7 +823,8 @@ class FormNavigation {
       "Pre-Money SAFE - Valuation Cap Only": "template-pre-money-cap",
       "Pre-Money SAFE - Discount Only": "template-pre-money-discount",
       "Pre-Money SAFE - Valuation Cap and Discount": "template-pre-money-both",
-      "Pre-money SAFE - MFN (Most Favored Nation)": "template-post-money-mfn"
+      "Pre-money SAFE - MFN (Most Favored Nation)": "template-post-money-mfn",
+      "Pro Rata Side Letter": "template-pro-rata"
     };
 
     const safeTemplateId = map[safeType];
