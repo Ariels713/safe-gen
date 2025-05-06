@@ -29,6 +29,7 @@ class FormNavigation {
       ],
       investor: [
         { id: "investor-name", type: "text", required: true },
+        { id: "investor-address", type: "text", required: false },
         { id: "investment-amount", type: "currency", required: true },
         { id: "investment-date", type: "date", required: true },
         { id: "entity-type", type: "select", required: true },
@@ -57,6 +58,7 @@ class FormNavigation {
         ],
         investor: [
           { id: "investor-name", type: "text", required: true },
+          { id: "investor-address", type: "text", required: true },
           { id: "investment-amount", type: "currency", required: true },
           { id: "investment-date", type: "date", required: true },
           { id: "entity-type", type: "select", required: true },
@@ -82,6 +84,7 @@ class FormNavigation {
         ],
         investor: [
           { id: "investor-name", type: "text", required: true },
+          { id: "investor-address", type: "text", required: true },
           { id: "investment-amount", type: "currency", required: true },
           { id: "entity-type", type: "select", required: false },
           { id: "entity-signatory-title", type: "text", required: false, dependsOn: "entity-type" },
@@ -288,6 +291,7 @@ class FormNavigation {
     // Investor tab event listeners
     const investorFields = [
       "investor-name",
+      "investor-address",
       "investment-amount",
       "investment-date",
       "entity-type",
@@ -301,6 +305,24 @@ class FormNavigation {
         field.addEventListener("change", () => this.updateTabAccessibility());
       }
     });
+
+    // Toggle entity signatory fields based on entity type
+    const entityTypeField = document.getElementById("entity-type");
+    if (entityTypeField) {
+      entityTypeField.addEventListener("change", () => {
+        const isEntity = entityTypeField.value !== "Individual";
+        const dependentFields = ["entity-signatory-name", "entity-signatory-title", "entity-signatory-email"];
+        dependentFields.forEach(id => {
+          const el = document.getElementById(id);
+          const wrapper = el?.closest(".form-group") || el?.closest(".safe-field-wrapper");
+          if (wrapper) {
+            wrapper.style.display = isEntity ? "flex" : "none";
+          }
+        });
+        // Re-validate tab when fields are toggled
+        this.updateTabAccessibility();
+      });
+    }
 
     // Email format validation for signatory-email
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -392,6 +414,14 @@ class FormNavigation {
     // Remove any hover-triggered display toggling for download buttons
     // (Assure: download buttons are only shown/hidden in review logic, not on hover events)
     // (No hover listeners or mouseover/mouseout events should be attached here)
+
+    // Add this in setupEventListeners()
+    document.querySelectorAll("input, select, textarea").forEach(input => {
+      input.addEventListener("input", (e) => {
+        this.formData[input.id] = input.value;
+        this.updateTabAccessibility();
+      });
+    });
   }
 
   canNavigateToTab(targetTab) {
@@ -715,6 +745,8 @@ class FormNavigation {
           if (!field.required) return false;
           if (field.dependsOn) {
             const trigger = document.getElementById(field.dependsOn);
+            // Skip validation if trigger is "Individual"
+            if (trigger && trigger.value === "Individual") return false;
             return trigger && trigger.value && trigger.value.trim() !== "";
           }
           return true;
@@ -826,30 +858,23 @@ class FormNavigation {
       return element ? element.value.trim() : "";
     };
 
-    // Replace all placeholders with actual values or empty strings
+    // Replace special placeholders
     html = html.replace(/\[dateOfSafe\]/g, dateOfSafe || "");
     html = html.replace(/\[valuationCap\]/g, valuationCap || "");
     html = html.replace(/\[discount\]/g, discount || "");
-    html = html.replace(/\[companyName\]/g, getInputValue("company-name") || "");
-    html = html.replace(/\[stateIncorporation\]/g, getInputValue("state-incorporation") || "");
-    html = html.replace(/\[stateGovernance\]/g, getInputValue("state-governance") || "");
-    html = html.replace(/\[companyAddress\]/g, getInputValue("company-address") || "");
-    html = html.replace(/\[signatoryName\]/g, getInputValue("signatory-name") || "");
-    html = html.replace(/\[signatoryTitle\]/g, getInputValue("signatory-title") || "");
-    html = html.replace(/\[signatoryEmail\]/g, getInputValue("signatory-email") || "");
-    html = html.replace(/\[investorName\]/g, getInputValue("investor-name") || "");
-    html = html.replace(/\[investmentAmount\]/g, getInputValue("investment-amount") || "");
-    html = html.replace(/\[investmentDate\]/g, getInputValue("investment-date") || "");
-    html = html.replace(/\[entityType\]/g, getInputValue("entity-type") || "");
-    html = html.replace(/\[entitySignatoryName\]/g, getInputValue("entity-signatory-name") || "");
-    html = html.replace(/\[entitySignatoryTitle\]/g, getInputValue("entity-signatory-title") || "");
-    html = html.replace(/\[entitySignatoryEmail\]/g, getInputValue("entity-signatory-email") || "");
-    html = html.replace(/\[investByLines\]/g, getInputValue("invest-by-lines") || "");
-    html = html.replace(/\[investorAddress\]/g, getInputValue("investor-address") || "");
-    html = html.replace(/\[investorEmail\]/g, getInputValue("investor-email") || "");
-    html = html.replace(/\[Governing Law Jurisdiction\]/g, getInputValue("state-governance") || "");
-    // Add replacement for [discountRate]
     html = html.replace(/\[discountRate\]/g, `${discountRate}%`);
+
+    // Replace all placeholders for every input, both camelCase and kebab-case
+    document.querySelectorAll("input, select, textarea").forEach(input => {
+      const id = input.id;
+      if (id) {
+        // kebab-case: [company-name]
+        html = html.replace(new RegExp(`\\[${id}\\]`, "g"), input.value.trim());
+        // camelCase: [companyName]
+        const camel = id.replace(/-([a-z])/g, g => g[1].toUpperCase());
+        html = html.replace(new RegExp(`\\[${camel}\\]`, "g"), input.value.trim());
+      }
+    });
 
     return html;
   }
