@@ -21,7 +21,6 @@
     overflow: hidden;
     padding: 2rem;
   }
-  
   /* Navigation Tabs */
   .safe-tabs {
     display: flex;
@@ -320,6 +319,7 @@
     font-size: 14px;
     line-height: 1.5;
     background: #fff;
+    font-family: "Times New Roman";
   }
 
 
@@ -334,10 +334,21 @@
   color: #00a688;
 }
   
-  .disclaimers ol {
-    margin-left: 20px;
-    margin-bottom: 15px;
+  .disclaimers ol, .disclaimers ul {
+    padding-left: 2rem;
+    margin-bottom: 1.5rem;
   }
+  .disclaimers ul {
+    list-style-type: none;
+  }
+  .disclaimer-list-letter {
+    font-size: 12px;
+    margin-right: 20px;
+  }
+  
+  /* .disclaimers ol[start="2"] {
+    padding-left: 2rem;
+  } */
   
   .disclaimers p {
     margin-bottom: 10px;
