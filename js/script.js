@@ -36,7 +36,7 @@ class FormNavigation {
         { id: "entity-signatory-name", type: "text", required: false, dependsOn: "entity-type" },
         { id: "entity-signatory-title", type: "text", required: false, dependsOn: "entity-type" },
         { id: "entity-signatory-email", type: "email", required: false, dependsOn: "entity-type" },
-        { id: "invest-by-lines", type: "text", required: true }
+        { id: "invest-by-lines", type: "text", required: false }
       ]
     };
 
@@ -47,49 +47,14 @@ class FormNavigation {
           { id: "valuation-cap-input", type: "currency", required: true },
           { id: "pro-rata-select", type: "select", required: true }
         ],
-        company: [
-          { id: "company-name", type: "text", required: true },
-          { id: "state-incorporation", type: "select", required: true, default: "Delaware" },
-          { id: "state-governance", type: "select", required: true, default: "Delaware" },
-          { id: "company-address", type: "text", required: true },
-          { id: "signatory-name", type: "text", required: true },
-          { id: "signatory-title", type: "text", required: true },
-          { id: "signatory-email", type: "email", required: true }
-        ],
-        investor: [
-          { id: "investor-name", type: "text", required: true },
-          { id: "investor-address", type: "text", required: true },
-          { id: "investment-amount", type: "currency", required: true },
-          { id: "investment-date", type: "date", required: true },
-          { id: "entity-type", type: "select", required: true },
-          { id: "entity-signatory-name", type: "text", required: false, dependsOn: "entity-type" },
-          { id: "entity-signatory-title", type: "text", required: false, dependsOn: "entity-type" },
-          { id: "entity-signatory-email", type: "email", required: false, dependsOn: "entity-type" },
-          { id: "invest-by-lines", type: "text", required: true }
-        ]
+        ...this.COMMON_FIELDS
       },
       "Post-Money SAFE - Discount Only": {
         safeType: [
           { id: "discount-input", type: "percentage", required: false },
           { id: "pro-rata-select", type: "select", required: false }
         ],
-        company: [
-          { id: "company-name", type: "text", required: true },
-          { id: "state-incorporation", type: "select", required: true, default: "Delaware" },
-          { id: "state-governance", type: "select", required: true, default: "Delaware" },
-          { id: "company-address", type: "text", required: false },
-          { id: "signatory-name", type: "text", required: false },
-          { id: "signatory-title", type: "text", required: false },
-          { id: "signatory-email", type: "email", required: false }
-        ],
-        investor: [
-          { id: "investor-name", type: "text", required: true },
-          { id: "investor-address", type: "text", required: true },
-          { id: "investment-amount", type: "currency", required: true },
-          { id: "entity-type", type: "select", required: false },
-          { id: "entity-signatory-title", type: "text", required: false, dependsOn: "entity-type" },
-          { id: "entity-signatory-email", type: "email", required: false, dependsOn: "entity-type" },
-        ]
+        ...this.COMMON_FIELDS
       },
       "Post-Money SAFE - MFN (Most Favored Nation)": {
         safeType: [
@@ -127,30 +92,6 @@ class FormNavigation {
     this.initializeElements();
     this.setupEventListeners();
     this.updateTabAccessibility();
-  }
-
-  /**
-   * Generates a .doc (Word) file from the selected legal template and triggers download.
-   * @param {string} templateId - The ID of the template to use.
-   * @param {string} filename - The filename for the downloaded .doc (default: SAFE_Document.doc)
-   */
-  generateDOC(templateId, filename = "SAFE_Document.doc") {
-    const htmlContent = this.getLegalTemplate(templateId);
-    const docHeader = `
-      <html xmlns:o='urn:schemas-microsoft-com:office:office'
-            xmlns:w='urn:schemas-microsoft-com:office:word'
-            xmlns='http://www.w3.org/TR/REC-html40'>
-      <head><meta charset='utf-8'></head><body>`;
-    const docFooter = "</body></html>";
-    const fullDoc = docHeader + htmlContent + docFooter;
-
-    const blob = new Blob(['\ufeff', fullDoc], { type: 'application/msword' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
   }
 
   /**
@@ -379,20 +320,21 @@ class FormNavigation {
     });
 
     // DOC download button event listener (restored logic)
+    const templateMap = {
+      "Post-Money SAFE - Valuation Cap Only": "template-post-money-cap",
+      "Post-Money SAFE - Discount Only": "template-post-money-discount",
+      "Post-Money SAFE - MFN (Most Favored Nation)": "template-post-money-mfn",
+      "Pre-Money SAFE - Valuation Cap Only": "template-pre-money-cap",
+      "Pre-Money SAFE - Discount Only": "template-pre-money-discount",
+      "Pre-Money SAFE - Valuation Cap and Discount": "template-pre-money-both",
+      "Pre-money SAFE - MFN (Most Favored Nation)": "template-pre-money-mfn",
+      "Pro Rata Side Letter": "template-pro-rata"
+    };
+
     const docDownloadBtn = document.getElementById("download-doc-btn");
     if (docDownloadBtn) {
       docDownloadBtn.addEventListener("click", () => {
         const safeType = this.formData.safeType;
-        const templateMap = {
-          "Post-Money SAFE - Valuation Cap Only": "template-post-money-cap",
-          "Post-Money SAFE - Discount Only": "template-post-money-discount",
-          "Post-Money SAFE - MFN (Most Favored Nation)": "template-post-money-mfn",
-          "Pre-Money SAFE - Valuation Cap Only": "template-pre-money-cap",
-          "Pre-Money SAFE - Discount Only": "template-pre-money-discount",
-          "Pre-Money SAFE - Valuation Cap and Discount": "template-pre-money-both",
-          "Pre-money SAFE - MFN (Most Favored Nation)": "template-post-money-mfn",
-          "Pro Rata Side Letter": "template-pro-rata" 
-        };
         const templateId = templateMap[safeType];
         if (!templateId) {
           alert("Template not found.");
@@ -799,6 +741,13 @@ class FormNavigation {
       { key: "investor" },
     ];
 
+    const sectionTitles = {
+      safeType: "SAFE Type",
+      company: "Company",
+      investor: "Investor"
+    };
+    const green = "#00a689"; // Use your actual green if different
+
     // 5) Loop over each section, look up its field list in safeConfig,
     //    then render only those fields that exist and have values.
     sections.forEach(({ key }) => {
@@ -807,13 +756,20 @@ class FormNavigation {
 
       const sectionEl = document.createElement("div");
       sectionEl.classList.add("section");
+
+      // Add the green header
+      const header = document.createElement("h4");
+      header.textContent = sectionTitles[key] || key;
+      header.style.color = green;
+      header.style.marginTop = "1.5em";
+      sectionEl.appendChild(header);
+
       const ul = document.createElement("ul");
       sectionEl.appendChild(ul);
 
       fields.forEach((fieldDef) => {
         const inputEl = document.getElementById(fieldDef.id);
         if (!inputEl || !inputEl.value) return;
-        // grab label text if possible
         const wrapper = inputEl.closest("label");
         const labelText = wrapper
           ? wrapper.firstChild.textContent.trim()
@@ -825,22 +781,23 @@ class FormNavigation {
     });
 
     // --- Updated logic for Pro Rata template and download buttons
-    const includesProRataSelect =
-      (safeConfig.safeType || []).some(field => field.id === "pro-rata-select");
 
-    const isPreMoneyMFN = safeKey === "Pre-money SAFE - MFN (Most Favored Nation)";
+    // Only show for Post-Money SAFEs with Pro Rata Rights
+    const isPostMoneySAFE = /^Post-Money SAFE/.test(safeKey);
     const hasProRataRights = this.formData.proRata === "Includes Pro Rata Rights";
 
-    // Show the Pro Rata button only if either condition is true
     this.proRataDownloadButton.style.display =
-      (isPreMoneyMFN || (includesProRataSelect && hasProRataRights))
+      (isPostMoneySAFE && hasProRataRights)
         ? 'inline-block'
         : 'none';
 
-    // Show/hide the Download SAFE button
+    // Always use the same label for Post-Money SAFEs
+    this.proRataDownloadButton.textContent = "Download Pro Rata Letter";
+
+    // Always show the SAFE download button for all SAFEs
     const docDownloadBtn = document.getElementById("download-doc-btn");
     if (docDownloadBtn) {
-      docDownloadBtn.style.display = isPreMoneyMFN ? 'none' : 'inline-block';
+      docDownloadBtn.style.display = 'inline-block';
     }
   }
 
@@ -890,7 +847,7 @@ class FormNavigation {
       "Pre-Money SAFE - Valuation Cap Only": "template-pre-money-cap",
       "Pre-Money SAFE - Discount Only": "template-pre-money-discount",
       "Pre-Money SAFE - Valuation Cap and Discount": "template-pre-money-both",
-      "Pre-money SAFE - MFN (Most Favored Nation)": "template-post-money-mfn",
+      "Pre-money SAFE - MFN (Most Favored Nation)": "template-pre-money-mfn",
       "Pro Rata Side Letter": "template-pro-rata"
     };
 

@@ -1,3 +1,14 @@
+.scrollable-inputs {
+  max-height: 60vh;
+  overflow-y: auto;
+  /* padding-right: 1rem; */
+  margin-bottom: 1.5rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 1rem;
+}
+
+
 
 * {
     box-sizing: border-box;
@@ -214,6 +225,15 @@
     gap: 1rem;
     margin-top: 2rem;
   }
+
+  .safe-nav-buttons.company-nav-buttons {
+    margin-top: unset;
+  }
+
+  .safe-nav-buttons.investor-nav-buttons  {
+    margin-top: unset;
+  }
+
   
   /* Review Output Styling */
   #review-output {
