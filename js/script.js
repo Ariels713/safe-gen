@@ -793,13 +793,23 @@ class FormNavigation {
     });
 
     // --- Updated logic for Pro Rata template and download buttons
+    const includesProRataSelect =
+      (safeConfig.safeType || []).some(field => field.id === "pro-rata-select");
+
+    const isPreMoneyMFN = safeKey === "Pre-money SAFE - MFN (Most Favored Nation)";
     const hasProRataRights = this.formData.proRata === "Includes Pro Rata Rights";
-    const isProRataLetterOnly = this.formData.safeType === "Pro Rata Side Letter";
 
-    // Toggle buttons
-    this.proRataDownloadButton.style.display = (hasProRataRights || isProRataLetterOnly) ? 'inline-block' : 'none';
+    // Show the Pro Rata button only if either condition is true
+    this.proRataDownloadButton.style.display =
+      (isPreMoneyMFN || (includesProRataSelect && hasProRataRights))
+        ? 'inline-block'
+        : 'none';
 
-    // Do not render the Pro Rata letter in the review view — only allow downloading it
+    // Show/hide the Download SAFE button
+    const docDownloadBtn = document.getElementById("download-doc-btn");
+    if (docDownloadBtn) {
+      docDownloadBtn.style.display = isPreMoneyMFN ? 'none' : 'inline-block';
+    }
   }
 
   getLegalTemplate(templateId) {
