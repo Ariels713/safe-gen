@@ -50,22 +50,26 @@ class FormNavigation {
           { id: "company-name", type: "text", required: true },
           { id: "state-incorporation", type: "select", required: true, default: "Delaware" },
           { id: "state-governance", type: "select", required: true, default: "Delaware" },
-          { id: "company-address", type: "text", required: false },
-          { id: "signatory-name", type: "text", required: false },
-          { id: "signatory-title", type: "text", required: false },
-          { id: "signatory-email", type: "email", required: false }
+          { id: "company-address", type: "text", required: true },
+          { id: "signatory-name", type: "text", required: true },
+          { id: "signatory-title", type: "text", required: true },
+          { id: "signatory-email", type: "email", required: true }
         ],
         investor: [
           { id: "investor-name", type: "text", required: true },
           { id: "investment-amount", type: "currency", required: true },
+          { id: "investment-date", type: "date", required: true },
+          { id: "entity-type", type: "select", required: true },
+          { id: "entity-signatory-name", type: "text", required: false, dependsOn: "entity-type" },
           { id: "entity-signatory-title", type: "text", required: false, dependsOn: "entity-type" },
           { id: "entity-signatory-email", type: "email", required: false, dependsOn: "entity-type" },
+          { id: "invest-by-lines", type: "text", required: true }
         ]
       },
       "Post-Money SAFE - Discount Only": {
         safeType: [
-          { id: "discount-input", type: "percentage", required: true },
-          { id: "pro-rata-select", type: "select", required: true }
+          { id: "discount-input", type: "percentage", required: false },
+          { id: "pro-rata-select", type: "select", required: false }
         ],
         company: [
           { id: "company-name", type: "text", required: true },
@@ -79,8 +83,9 @@ class FormNavigation {
         investor: [
           { id: "investor-name", type: "text", required: true },
           { id: "investment-amount", type: "currency", required: true },
-          { id: "entity-signatory-title", type: "text", required: true, dependsOn: "entity-type" },
-          { id: "entity-signatory-email", type: "email", required: true, dependsOn: "entity-type" },
+          { id: "entity-type", type: "select", required: false },
+          { id: "entity-signatory-title", type: "text", required: false, dependsOn: "entity-type" },
+          { id: "entity-signatory-email", type: "email", required: false, dependsOn: "entity-type" },
         ]
       },
       "Post-Money SAFE - MFN (Most Favored Nation)": {
@@ -110,7 +115,7 @@ class FormNavigation {
       },
       "Pre-money SAFE - MFN (Most Favored Nation)": {
         safeType: [
-          { id: "pro-rata-select", type: "select", required: true }
+          // { id: "pro-rata-select", type: "select", required: true }
         ],
         ...this.COMMON_FIELDS
       }
@@ -234,7 +239,7 @@ class FormNavigation {
         this.navigateToNextTab();
       }
     });
-
+ 
     // Back button event listeners
     const backButtons = document.querySelectorAll(".safe-back");
     backButtons.forEach((button) => {
@@ -296,6 +301,34 @@ class FormNavigation {
         field.addEventListener("change", () => this.updateTabAccessibility());
       }
     });
+
+    // Email format validation for signatory-email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const companyEmailField = document.getElementById("signatory-email");
+    const companyEmailError = document.getElementById("signatory-email-error");
+    if (companyEmailField) {
+      companyEmailField.addEventListener("input", () => {
+        const isValid = emailRegex.test(companyEmailField.value.trim());
+        if (companyEmailError) {
+          companyEmailError.textContent = isValid ? "" : "Please enter a valid email address.";
+          companyEmailError.style.display = isValid ? "none" : "block";
+        }
+        this.updateTabAccessibility();
+      });
+    }
+    // Email format validation for investor entity-signatory-email
+    const investorEmailField = document.getElementById("entity-signatory-email");
+    const investorEmailError = document.getElementById("entity-signatory-email-error");
+    if (investorEmailField) {
+      investorEmailField.addEventListener("input", () => {
+        const isValid = emailRegex.test(investorEmailField.value.trim());
+        if (investorEmailError) {
+          investorEmailError.textContent = isValid ? "" : "Please enter a valid email address.";
+          investorEmailError.style.display = isValid ? "none" : "block";
+        }
+        this.updateTabAccessibility();
+      });
+    }
 
     // Add click handlers to tab buttons
     this.tabButtons.forEach((button) => {
@@ -517,7 +550,7 @@ class FormNavigation {
     // If we have a value, check if it's within range
     if (value) {
       const numValue = parseInt(value);
-      if (numValue >= 0 && numValue <= 50) {
+      if (numValue >= 0 && numValue <= 100) {
         // Valid input - store just the number
         input.value = value;
         this.formData.discount = value;
@@ -727,23 +760,22 @@ class FormNavigation {
         `;
     this.reviewOutput.appendChild(docSection);
 
-    // 4) Define the sections you want to render and their titles
+    // 4) Define the sections you want to render
     const sections = [
-      { key: "safeType", title: "Terms" },
-      { key: "company", title: "Company Information" },
-      { key: "investor", title: "Investor Information" },
+      { key: "safeType" },
+      { key: "company" },
+      { key: "investor" },
     ];
 
     // 5) Loop over each section, look up its field list in safeConfig,
     //    then render only those fields that exist and have values.
-    sections.forEach(({ key, title }) => {
+    sections.forEach(({ key }) => {
       const fields = safeConfig[key];
       if (!fields || !fields.length) return;
 
       const sectionEl = document.createElement("div");
       sectionEl.classList.add("section");
       const ul = document.createElement("ul");
-      sectionEl.innerHTML = `<h3>${title}</h3>`;
       sectionEl.appendChild(ul);
 
       fields.forEach((fieldDef) => {
