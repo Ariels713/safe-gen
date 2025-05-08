@@ -14,7 +14,7 @@ class FormNavigation {
       proRataRights: "",
       disclaimerAccepted: false,
       dateOfSafe: this.getCurrentDate()
-    };
+    }; 
 
     // Common field configurations
     this.COMMON_FIELDS = {
@@ -31,7 +31,7 @@ class FormNavigation {
         { id: "investor-name", type: "text", required: true },
         { id: "investor-address", type: "text", required: false },
         { id: "investment-amount", type: "currency", required: true },
-        { id: "investment-date", type: "date", required: true },
+        { id: "investment-date", type: "date", required: false },
         { id: "entity-type", type: "select", required: true },
         { id: "entity-signatory-name", type: "text", required: false, dependsOn: "entity-type" },
         { id: "entity-signatory-title", type: "text", required: false, dependsOn: "entity-type" },
@@ -257,7 +257,7 @@ class FormNavigation {
           const el = document.getElementById(id);
           const wrapper = el?.closest(".form-group") || el?.closest(".safe-field-wrapper");
           if (wrapper) {
-            wrapper.style.display = isEntity ? "flex" : "none";
+            wrapper.style.display = isEntity ? "block" : "none";
           }
         });
         // Re-validate tab when fields are toggled
@@ -646,7 +646,7 @@ class FormNavigation {
       const input = document.getElementById(field.id);
       if (input) {
         const wrapper =
-          input.closest("label") || input.closest(".safe-field-wrapper");
+          input.closest("label") || input.closest(".safe-fiel-wrapper");
         if (wrapper) {
           wrapper.style.display = "flex";
         }
@@ -715,7 +715,11 @@ class FormNavigation {
    * Gather all the inputs/selections and
    * render them into the Review pane.
    */
-  populateReview() {
+  async populateReview() {
+    console.log('Starting populateReview...'); // Debug log 7
+    await this.sendDataToMake();
+    console.log('Finished sendDataToMake call'); // Debug log 8
+
     // 1) clear out any prior content
     this.reviewOutput.innerHTML = "";
 
@@ -948,7 +952,7 @@ class FormNavigation {
       if (element) {
         const wrapper = element.closest(".form-group") || element.closest(".safe-field-wrapper");
         if (wrapper) {
-          wrapper.style.display = isVisible ? "flex" : "none";
+          wrapper.style.display = isVisible ? "block" : "none";
         }
       }
     });
@@ -960,6 +964,43 @@ class FormNavigation {
     const dd = String(today.getDate()).padStart(2, '0');
     const yyyy = today.getFullYear();
     return `${mm}/${dd}/${yyyy}`;
+  }
+
+  async sendDataToMake() {
+    try {
+      // Gather all relevant form data as flat properties
+      const formData = {
+        safeType: this.formData.safeType,
+        companyName: document.getElementById("company-name")?.value || "",
+        stateIncorporation: document.getElementById("state-incorporation")?.value || "",
+        stateGovernance: document.getElementById("state-governance")?.value || "",
+        companyAddress: document.getElementById("company-address")?.value || "",
+        signatoryName: document.getElementById("signatory-name")?.value || "",
+        signatoryTitle: document.getElementById("signatory-title")?.value || "",
+        signatoryEmail: document.getElementById("signatory-email")?.value || "",
+        investorName: document.getElementById("investor-name")?.value || "",
+        investorAddress: document.getElementById("investor-address")?.value || "",
+        investmentAmount: document.getElementById("investment-amount")?.value || "",
+        investmentDate: document.getElementById("investment-date")?.value || "",
+        entityType: document.getElementById("entity-type")?.value || "",
+        entitySignatoryName: document.getElementById("entity-signatory-name")?.value || "",
+        entitySignatoryTitle: document.getElementById("entity-signatory-title")?.value || "",
+        entitySignatoryEmail: document.getElementById("entity-signatory-email")?.value || "",
+        investByLines: document.getElementById("invest-by-lines")?.value || ""
+      };
+
+      // Log for debugging
+      console.log('Sending to Make.com (flat):', formData);
+
+      // Send to Make.com webhook
+      await fetch('https://hook.us2.make.com/573ixf0az1jqknowp7o5z0oeqzkk9zbl', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      });
+    } catch (error) {
+      console.error('Error sending data to Make.com:', error);
+    }
   }
 }
 
